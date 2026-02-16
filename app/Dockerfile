@@ -1,25 +1,24 @@
 # Stage 1: Build dependencies
-FROM python:3.11-slim as builder
+FROM python:3.11-slim-bookworm as builder
 
 WORKDIR /app
 
-# Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip + wheel (wheel issue fixed in 0.46.2)
-RUN pip install --no-cache-dir -U pip wheel
+# Upgrade packaging tools (fix wheel/pip alerts)
+RUN pip install --no-cache-dir -U "pip>=26.0" "setuptools" "wheel>=0.46.2"
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Stage 2: Runtime
-FROM python:3.11-slim
+FROM python:3.11-slim-bookworm
 
 WORKDIR /app
 
-# Patch OS packages (reduces glibc/util-linux findings)
+# Patch OS packages (reduces glibc/util-linux/sqlite/tar etc findings)
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
@@ -30,6 +29,7 @@ COPY --chown=appuser:appuser . .
 ENV PATH=/home/appuser/.local/bin:$PATH
 
 USER appuser
+
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
