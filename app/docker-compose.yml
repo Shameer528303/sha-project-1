@@ -5,38 +5,58 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
     ports:
       - "8000:8000"
     environment:
       - PORT=8000
       - AWS_REGION=us-east-1
-      - STORAGE_TYPE=s3  # TODO: Change to dynamodb or rds if needed
-      - STORAGE_BUCKET=document-service-storage  # TODO: Set actual bucket name
+      - STORAGE_TYPE=s3
+      - STORAGE_BUCKET=document-service-storage
       - CACHE_HOST=redis
       - CACHE_PORT=6379
+      - PYTHONUNBUFFERED=1
     depends_on:
-      - redis
-    # volumes:
-    #   - ./:/app  # Uncomment for development
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    networks:
+      - app-network
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.4-alpine
     ports:
-      - "6379:6379"
-    command: redis-server --appendonly yes
+      - "127.0.0.1:6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-changeme}
     volumes:
       - redis-data:/data
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
       interval: 10s
       timeout: 3s
       retries: 3
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - app-network
 
 volumes:
   redis-data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
