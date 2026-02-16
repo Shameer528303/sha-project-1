@@ -38,25 +38,29 @@ jobs:
           cd app
           pip install -r requirements.txt
       
-      # TODO: Add unit tests if you have them
-      # - name: Run tests
-      #   run: |
-      #     cd app
-      #     pytest
+      - name: Run tests
+        if: ${{ hashFiles('app/tests/**') != '' }}
+        run: |
+          cd app
+          pytest
       
       - name: Build Docker image
         run: |
           cd app
           docker build -t $ECR_REPOSITORY:latest .
       
-      # TODO: Add security scanning
-      # - name: Run Trivy vulnerability scanner
-      #   uses: aquasecurity/trivy-action@master
-      #   with:
-      #     image-ref: $ECR_REPOSITORY:latest
-      #     format: 'sarif'
-      #     output: 'trivy-results.sarif'
-      #     severity: 'CRITICAL,HIGH'
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: document-service:latest
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "trivy-results.sarif"
 
   # terraform-plan:
   #   name: Terraform Plan
