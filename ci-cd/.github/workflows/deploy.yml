@@ -58,115 +58,115 @@ jobs:
       #     output: 'trivy-results.sarif'
       #     severity: 'CRITICAL,HIGH'
 
-  terraform-plan:
-    name: Terraform Plan
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+  # terraform-plan:
+  #   name: Terraform Plan
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'pull_request'
     
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
       
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: ${{ env.AWS_REGION }}
       
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.5.0
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v3
+  #       with:
+  #         terraform_version: 1.5.0
       
-      - name: Terraform Init
-        run: |
-          cd infrastructure
-          terraform init
+  #     - name: Terraform Init
+  #       run: |
+  #         cd infrastructure
+  #         terraform init
       
-      - name: Terraform Plan
-        run: |
-          cd infrastructure
-          terraform plan -no-color
+  #     - name: Terraform Plan
+  #       run: |
+  #         cd infrastructure
+  #         terraform plan -no-color
 
-  deploy:
-    name: Deploy to AWS
-    runs-on: ubuntu-latest
-    needs: [build-and-test]
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+  # deploy:
+  #   name: Deploy to AWS
+  #   runs-on: ubuntu-latest
+  #   needs: [build-and-test]
+  #   if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
       
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: ${{ env.AWS_REGION }}
       
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+  #     - name: Login to Amazon ECR
+  #       id: login-ecr
+  #       uses: aws-actions/amazon-ecr-login@v2
       
-      - name: Build, tag, and push image to Amazon ECR
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          cd app
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+  #     - name: Build, tag, and push image to Amazon ECR
+  #       env:
+  #         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+  #         IMAGE_TAG: ${{ github.sha }}
+  #       run: |
+  #         cd app
+  #         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+  #         docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+  #         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+  #         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
       
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.5.0
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v3
+  #       with:
+  #         terraform_version: 1.5.0
       
-      - name: Terraform Init
-        run: |
-          cd infrastructure
-          terraform init
+  #     - name: Terraform Init
+  #       run: |
+  #         cd infrastructure
+  #         terraform init
       
-      - name: Terraform Apply
-        run: |
-          cd infrastructure
-          terraform apply -auto-approve
+  #     - name: Terraform Apply
+  #       run: |
+  #         cd infrastructure
+  #         terraform apply -auto-approve
       
-      # TODO: Add deployment steps based on your choice (EKS or ECS)
-      # Option A: EKS Deployment
-      - name: Configure kubectl
-        run: |
-          aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
+  #     # TODO: Add deployment steps based on your choice (EKS or ECS)
+  #     # Option A: EKS Deployment
+  #     - name: Configure kubectl
+  #       run: |
+  #         aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
       
-      - name: Deploy to EKS (Kubernetes Manifests)
-        run: |
-          # Update image in deployment.yaml
-          sed -i "s|image:.*|image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|" kubernetes/deployment.yaml
-          kubectl apply -f kubernetes/
+  #     - name: Deploy to EKS (Kubernetes Manifests)
+  #       run: |
+  #         # Update image in deployment.yaml
+  #         sed -i "s|image:.*|image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|" kubernetes/deployment.yaml
+  #         kubectl apply -f kubernetes/
       
-      # OR: Deploy using Helm
-      # - name: Deploy to EKS (Helm)
-      #   run: |
-      #     helm upgrade --install document-service kubernetes/helm/document-service \
-      #       --set image.repository=$ECR_REGISTRY/$ECR_REPOSITORY \
-      #       --set image.tag=$IMAGE_TAG
+  #     # OR: Deploy using Helm
+  #     # - name: Deploy to EKS (Helm)
+  #     #   run: |
+  #     #     helm upgrade --install document-service kubernetes/helm/document-service \
+  #     #       --set image.repository=$ECR_REGISTRY/$ECR_REPOSITORY \
+  #     #       --set image.tag=$IMAGE_TAG
       
-      # Option B: ECS Deployment
-      # - name: Update ECS Service
-      #   run: |
-      #     aws ecs update-service \
-      #       --cluster $ECS_CLUSTER_NAME \
-      #       --service document-service \
-      #       --force-new-deployment \
-      #       --region $AWS_REGION
+  #     # Option B: ECS Deployment
+  #     # - name: Update ECS Service
+  #     #   run: |
+  #     #     aws ecs update-service \
+  #     #       --cluster $ECS_CLUSTER_NAME \
+  #     #       --service document-service \
+  #     #       --force-new-deployment \
+  #     #       --region $AWS_REGION
       
-      # TODO: Add integration tests
-      # - name: Run integration tests
-      #   run: |
-      #     # Test the deployed service
-      #     ALB_DNS=$(terraform -chdir=infrastructure output -raw alb_dns_name)
-      #     curl -f https://$ALB_DNS/health
+  #     # TODO: Add integration tests
+  #     # - name: Run integration tests
+  #     #   run: |
+  #     #     # Test the deployed service
+  #     #     ALB_DNS=$(terraform -chdir=infrastructure output -raw alb_dns_name)
+  #     #     curl -f https://$ALB_DNS/health
