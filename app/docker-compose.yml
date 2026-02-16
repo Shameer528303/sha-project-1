@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - AWS_REGION=us-east-1
+      - STORAGE_TYPE=s3  # TODO: Change to dynamodb or rds if needed
+      - STORAGE_BUCKET=document-service-storage  # TODO: Set actual bucket name
+      - CACHE_HOST=redis
+      - CACHE_PORT=6379
+    depends_on:
+      - redis
+    # volumes:
+    #   - ./:/app  # Uncomment for development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  redis-data:

@@ -1,0 +1,87 @@
+# Bitbucket Pipelines configuration
+# TODO: Complete this pipeline
+
+image: atlassian/default-image:3
+
+definitions:
+  steps:
+    - step: &build-test
+        name: Build and Test
+        caches:
+          - pip
+        script:
+          - cd app
+          - pip install -r requirements.txt
+          # TODO: Add unit tests
+          # - pytest
+          - docker build -t document-service:latest .
+        services:
+          - docker
+
+    - step: &terraform-plan
+        name: Terraform Plan
+        script:
+          - apt-get update && apt-get install -y unzip
+          - wget https://releases.hashicorp.com/terraform/1.5.0/terraform_1.5.0_linux_amd64.zip
+          - unzip terraform_1.5.0_linux_amd64.zip
+          - mv terraform /usr/local/bin/
+          - cd infrastructure
+          - terraform init
+          - terraform plan
+        services:
+          - docker
+
+    - step: &deploy
+        name: Deploy to AWS
+        deployment: production
+        script:
+          - apt-get update && apt-get install -y unzip awscli
+          - wget https://releases.hashicorp.com/terraform/1.5.0/terraform_1.5.0_linux_amd64.zip
+          - unzip terraform_1.5.0_linux_amd64.zip
+          - mv terraform /usr/local/bin/
+          
+          # Configure AWS credentials
+          - export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+          - export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+          - export AWS_DEFAULT_REGION=us-east-1
+          
+          # Login to ECR
+          - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REGISTRY
+          
+          # Build and push image
+          - cd app
+          - docker build -t $ECR_REGISTRY/document-service:$BITBUCKET_COMMIT .
+          - docker tag $ECR_REGISTRY/document-service:$BITBUCKET_COMMIT $ECR_REGISTRY/document-service:latest
+          - docker push $ECR_REGISTRY/document-service:$BITBUCKET_COMMIT
+          - docker push $ECR_REGISTRY/document-service:latest
+          
+          # Deploy infrastructure
+          - cd ../infrastructure
+          - terraform init
+          - terraform apply -auto-approve
+          
+          # Deploy to Kubernetes (if using EKS)
+          - aws eks update-kubeconfig --name document-service-cluster --region us-east-1
+          - sed -i "s|image:.*|image: $ECR_REGISTRY/document-service:$BITBUCKET_COMMIT|" ../kubernetes/deployment.yaml
+          - kubectl apply -f ../kubernetes/
+        services:
+          - docker
+
+pipelines:
+  default:
+    - step: *build-test
+    - step: *terraform-plan
+
+  branches:
+    main:
+      - step: *build-test
+      - step: *deploy
+    master:
+      - step: *build-test
+      - step: *deploy
+
+  pull-requests:
+    '**':
+      - step: *build-test
+      - step: *terraform-plan
+

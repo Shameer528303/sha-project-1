@@ -1,0 +1,128 @@
+# Kubernetes Deployment for Document Service
+# TODO: Complete this deployment manifest
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: document-service
+  namespace: default
+  labels:
+    app: document-service
+    version: v1
+spec:
+  replicas: 2  # TODO: Adjust based on requirements
+  selector:
+    matchLabels:
+      app: document-service
+  template:
+    metadata:
+      labels:
+        app: document-service
+        version: v1
+    spec:
+      # TODO: Use service account with IAM role (for EKS IRSA)
+      # serviceAccountName: document-service-sa
+      
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      
+      containers:
+      - name: document-service
+        image: # TODO: Set ECR image URL
+        imagePullPolicy: Always
+        
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        
+        env:
+        - name: PORT
+          value: "8000"
+        - name: AWS_REGION
+          value: "us-east-1"  # TODO: Use variable
+        - name: STORAGE_TYPE
+          value: "s3"  # TODO: s3, dynamodb, or rds
+        - name: STORAGE_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: document-service-config
+              key: storage-bucket
+        - name: CACHE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: document-service-config
+              key: cache-host
+        - name: CACHE_PORT
+          value: "6379"
+        
+        # TODO: Add secrets from AWS Secrets Manager or Kubernetes secrets
+        # envFrom:
+        # - secretRef:
+        #     name: document-service-secrets
+        
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false  # TODO: Set to true if possible
+          capabilities:
+            drop:
+            - ALL
+
+---
+# Service for Document Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: document-service
+  namespace: default
+  labels:
+    app: document-service
+spec:
+  type: ClusterIP  # TODO: Use NodePort or LoadBalancer if needed
+  selector:
+    app: document-service
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+
+---
+# ConfigMap for configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: document-service-config
+  namespace: default
+data:
+  storage-bucket: "document-service-storage"  # TODO: Set actual bucket name
+  cache-host: "elasticache-redis-endpoint"     # TODO: Set actual cache endpoint
+
