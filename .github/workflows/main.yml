@@ -65,7 +65,7 @@ jobs:
   terraform-plan:
     name: Terraform Plan
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
+    #if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
 
     steps:
       - name: Checkout code
