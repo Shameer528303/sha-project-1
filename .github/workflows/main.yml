@@ -224,8 +224,8 @@ jobs:
           kubectl get secret document-service-secrets -n default
           kubectl get sa document-service-sa -n default
           kubectl get pods -l app=document-service
+          kubectl describe pod document-service-5768f4746d-w4nbn | tail -n 60
 
-          kubectl rollout status deployment/document-service --timeout=120s
           kubectl logs -l app=document-service --tail=50
 
       - name: Smoke test API
