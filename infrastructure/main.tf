@@ -149,7 +149,7 @@ resource "aws_route_table_association" "private_assoc" {
   route_table_id = aws_route_table.private_rt.id
 }
 
-# TODO: Create ECR repository for container images
+# Create ECR repository for container images
 resource "aws_ecr_repository" "app" {
    name                 = "${var.project_name}-app"
    image_tag_mutability = "MUTABLE"
@@ -159,16 +159,249 @@ resource "aws_ecr_repository" "app" {
    }
 }
 
+# Keep last N images only (cost control)
+resource "aws_ecr_lifecycle_policy" "app" {
+  repository = aws_ecr_repository.app.name
+
+  policy = jsonencode({
+    rules = [
+      {
+        rulePriority = 1
+        description  = "Keep last 20 images"
+        selection = {
+          tagStatus   = "any"
+          countType   = "imageCountMoreThan"
+          countNumber = 20
+        }
+        action = {
+          type = "expire"
+        }
+      }
+    ]
+  })
+}
+
+#EKS role creation
+resource "aws_iam_role" "eks_cluster_role" {
+  name = "${var.name_prefix}-eks-cluster-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect    = "Allow",
+      Principal = { Service = "eks.amazonaws.com" },
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "eks_cluster_AmazonEKSClusterPolicy" {
+  role       = aws_iam_role.eks_cluster_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_cluster_AmazonEKSVPCResourceController" {
+  role       = aws_iam_role.eks_cluster_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
+}
+
+# EKS Node IAM Role
+resource "aws_iam_role" "eks_node_role" {
+  name = "${var.name_prefix}-eks-node-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect    = "Allow",
+      Principal = { Service = "ec2.amazonaws.com" },
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "eks_node_AmazonEKSWorkerNodePolicy" {
+  role       = aws_iam_role.eks_node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_node_AmazonEKS_CNI_Policy" {
+  role       = aws_iam_role.eks_node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_node_AmazonEC2ContainerRegistryReadOnly" {
+  role       = aws_iam_role.eks_node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+# Optional but useful for troubleshooting: SSM access to nodes
+resource "aws_iam_role_policy_attachment" "eks_node_AmazonSSMManagedInstanceCore" {
+  role       = aws_iam_role.eks_node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+# Security Group for EKS 
+resource "aws_security_group" "eks_cluster_sg" {
+  name        = "${var.name_prefix}-eks-cluster-sg"
+  description = "EKS cluster security group"
+  vpc_id      = aws_vpc.main.id
+
+  # Allow outbound
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.name_prefix}-eks-cluster-sg"
+  }
+}
+
+# EKS Cluster
+resource "aws_eks_cluster" "this" {
+  name     = "${var.name_prefix}-eks"
+  role_arn = aws_iam_role.eks_cluster_role.arn
+  version  = var.eks_version
+
+  vpc_config {
+    subnet_ids              = concat(aws_subnet.public[*].id, aws_subnet.private[*].id)
+    security_group_ids      = [aws_security_group.eks_cluster_sg.id]
+    endpoint_public_access  = true
+    endpoint_private_access = true
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_cluster_AmazonEKSClusterPolicy,
+    aws_iam_role_policy_attachment.eks_cluster_AmazonEKSVPCResourceController
+  ]
+
+  tags = {
+    Name = "${var.name_prefix}-eks"
+  }
+}
+
+# Managed Node Group (PRIVATE subnets)
+resource "aws_eks_node_group" "default" {
+  cluster_name    = aws_eks_cluster.this.name
+  node_group_name = "${var.name_prefix}-ng"
+  node_role_arn   = aws_iam_role.eks_node_role.arn
+  subnet_ids      = aws_subnet.private[*].id
+
+  scaling_config {
+    desired_size = var.eks_node_desired
+    min_size     = var.eks_node_min
+    max_size     = var.eks_node_max
+  }
+
+  instance_types = [var.eks_node_instance_type]
+  capacity_type  = "ON_DEMAND"
+
+  update_config {
+    max_unavailable = 1
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_node_AmazonEKSWorkerNodePolicy,
+    aws_iam_role_policy_attachment.eks_node_AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.eks_node_AmazonEC2ContainerRegistryReadOnly
+  ]
+
+  tags = {
+    Name = "${var.name_prefix}-nodegroup"
+  }
+}
+
+#dynamodb table for state locking 
+
+resource "aws_dynamodb_table" "documents" {
+  name         = "${var.name_prefix}-documents"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = {
+    Name = "${var.name_prefix}-documents"
+  }
+}
+
+output "dynamodb_table_name" {
+  value = aws_dynamodb_table.documents.name
+}
+
+
+#ElastiCache Redis
+# Security group allowing Redis only from EKS nodes (inside VPC)
+resource "aws_security_group" "redis_sg" {
+  name        = "${var.name_prefix}-redis-sg"
+  description = "Allow Redis from within VPC (EKS nodes)"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = 6379
+    to_port     = 6379
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.main.cidr_block]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.name_prefix}-redis-sg"
+  }
+}
+
+resource "aws_elasticache_subnet_group" "redis" {
+  name       = "${var.name_prefix}-redis-subnets"
+  subnet_ids = aws_subnet.private[*].id
+}
+
+resource "aws_elasticache_replication_group" "redis" {
+  replication_group_id       = "${var.name_prefix}-redis"
+  description                = "Redis cache for document service"
+  engine                     = "redis"
+  engine_version             = "7.1"
+  node_type                  = var.redis_node_type
+  port                       = 6379
+  parameter_group_name       = "default.redis7"
+  subnet_group_name          = aws_elasticache_subnet_group.redis.name
+  security_group_ids         = [aws_security_group.redis_sg.id]
+
+  automatic_failover_enabled = true
+  multi_az_enabled           = true
+
+  num_cache_clusters         = 2
+
+  tags = {
+    Name = "${var.name_prefix}-redis"
+  }
+}
+
+output "redis_primary_endpoint" {
+  value = aws_elasticache_replication_group.redis.primary_endpoint_address
+}
+
+
+
 # TODO: Create EKS cluster OR ECS cluster
 # Option A: EKS
 # - EKS cluster
 # - Node group(s) in private subnets
 # - IAM roles for service accounts
-
-# Option B: ECS Fargate
-# - ECS cluster
-# - Fargate task definition
-# - ECS service
 
 # TODO: Create Application Load Balancer
 # - ALB in public subnets
