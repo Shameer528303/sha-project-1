@@ -10,7 +10,7 @@ on:
   pull_request:
     branches:
       - main
-
+      
 env:
   AWS_REGION: ap-south-1
   ECR_REPOSITORY: shahil-project-app  # TODO: Update with your ECR repo name
@@ -27,20 +27,21 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          
+        
       - name: Detect changes in app folder
         id: changes
         uses: dorny/paths-filter@v3
         with:
           filters: |
             app:
-              - 'app/**'
+              - 'app/**'     
               
+      - name: Set up Python
+        if: steps.changes.outputs.app == 'true'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+                        
       - name: Install dependencies
         if: steps.changes.outputs.app == 'true'
         run: |
@@ -210,6 +211,7 @@ jobs:
           
       - name: Verify deployment
         run: |
+          kubectl get deploy document-service -o jsonpath='{.spec.template.spec.containers[0].image}'; echo
           kubectl get secret document-service-secrets -n default
           kubectl get sa document-service-sa -n default
           kubectl get pods -l app=document-service
