@@ -9,7 +9,7 @@ variable "aws_region" {
 variable "project_name" {
   description = "Name of the project"
   type        = string
-  default     = "text-similarity-service"
+  default     = "shahil-project"
 }
 
 variable "environment" {
