@@ -1,4 +1,4 @@
-# GitHub Actions workflow for CI/CD.
+# GitHub Actions workflow for CI/CD
 # TODO: Complete this pipeline.
 
 name: Build and Deploy
