@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile for Python FastAPI application
+# Multi-stage Dockerfile for Python FastAPI application.
 # TODO: Optimize this Dockerfile following best practices
 
 # Stage 1: Build dependencies
