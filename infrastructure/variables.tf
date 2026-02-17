@@ -60,3 +60,43 @@ variable "private_subnet_cidrs" {
   default     = ["10.0.10.0/24", "10.0.20.0/24"]
 }
 
+#eks cluster variables
+
+variable "eks_version" {
+  type        = string
+  description = "EKS Kubernetes version"
+  default     = "1.29"
+}
+
+variable "eks_node_instance_type" {
+  type        = string
+  description = "Instance type for EKS managed node group"
+  default     = "t3.micro"
+}
+
+variable "eks_node_min" {
+  type    = number
+  default = 1
+}
+
+variable "eks_node_desired" {
+  type    = number
+  default = 2
+}
+
+variable "eks_node_max" {
+  type    = number
+  default = 3
+}
+
+#redis variables
+variable "redis_node_type" {
+  type        = string
+  description = "ElastiCache Redis node type"
+  default     = "cache.t3.micro"
+}
+
+
+
+
+
