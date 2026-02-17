@@ -27,7 +27,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+        with:
+          fetch-depth: 0
+          
       - name: Detect changes in app folder
         id: changes
         uses: dorny/paths-filter@v3
@@ -87,6 +89,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        
         
       - name: Detect changes in infrastructure folder
         id: changesininfra
@@ -130,7 +134,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+        with:
+          fetch-depth: 0
+          
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
