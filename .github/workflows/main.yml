@@ -125,12 +125,22 @@ jobs:
         run: |
           cd infrastructure
           terraform apply -auto-approve
-
+          
+      - name: Detect changes in app folder
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            app:
+              - 'app/**'
+              
       - name: Login to Amazon ECR
+        if: steps.changes.outputs.app == 'true'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
       
       - name: Build, tag, and push image to Amazon ECR
+        if: steps.changes.outputs.app == 'true'
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
