@@ -1,4 +1,4 @@
-# Main Terraform configuration
+# Main Terraform configuration.
 # TODO: Complete this infrastructure setup
 
 terraform {
