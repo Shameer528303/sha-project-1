@@ -14,7 +14,7 @@ on:
 env:
   AWS_REGION: ap-south-1
   ECR_REPOSITORY: shahil-project-app  # TODO: Update with your ECR repo name
-  # EKS_CLUSTER_NAME: document-service-cluster  # TODO: Update if using EKS
+  EKS_CLUSTER_NAME: one-eks  # TODO: Update if using EKS
   # ECS_CLUSTER_NAME: document-service-cluster  # TODO: Update if using ECS
 
 jobs:
