@@ -1,47 +1,60 @@
-# Multi-stage Dockerfile for Python FastAPI application
-# TODO: Optimize this Dockerfile following best practices
+# syntax=docker/dockerfile:1.6
 
-# Stage 1: Build dependencies
-FROM python:3.11-slim as builder
+############################
+# Stage 1: builder (wheels)
+############################
+FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
+      build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN python -m pip install --upgrade pip \
+    && pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
 
-# Stage 2: Runtime
-FROM python:3.11-slim
+
+############################
+# Stage 2: runtime
+############################
+FROM python:3.11-slim AS runtime
 
 WORKDIR /app
 
-# Create non-root user
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1
 
-# Copy installed packages from builder
-COPY --from=builder /root/.local /home/appuser/.local
+# Compose healthcheck uses curl, so install it here.
+# (Also useful for debugging containers.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy application code
+# Non-root user
+RUN useradd --create-home --uid 1000 --shell /usr/sbin/nologin appuser
+
+# Install dependencies from wheels (no compiler needed here)
+COPY --from=builder /wheels /wheels
+COPY requirements.txt .
+RUN python -m pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt \
+    && rm -rf /wheels
+
+# Copy app source last
 COPY --chown=appuser:appuser . .
 
-# Set PATH for user-installed packages
-ENV PATH=/home/appuser/.local/bin:$PATH
-
-# Switch to non-root user
 USER appuser
 
-# Expose port
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
+# Optional defaults (compose overrides these anyway)
+ENV PORT=8000 \
+    AWS_REGION=us-east-1
 
-# Run application
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-
