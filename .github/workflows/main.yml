@@ -202,6 +202,7 @@ jobs:
       #     kubectl apply -f kubernetes/
           
       - name: Deploy to EKS (Kubernetes Manifests)
+        if: steps.changes.outputs.app == 'true'
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
@@ -217,7 +218,6 @@ jobs:
           kubectl get pods -l app=document-service
 
           kubectl rollout status deployment/document-service --timeout=120s
-          kubectl get pods -l app=document-service
           kubectl logs -l app=document-service --tail=50
 
       - name: Smoke test API
