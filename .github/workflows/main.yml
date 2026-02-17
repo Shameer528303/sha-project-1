@@ -219,6 +219,7 @@ jobs:
           kubectl apply -f kubernetes/
           
       - name: Verify deployment
+        if: steps.changes.outputs.app == 'true'
         run: |
           kubectl get deploy document-service -o jsonpath='{.spec.template.spec.containers[0].image}'; echo
           kubectl get secret document-service-secrets -n default
@@ -229,6 +230,7 @@ jobs:
           kubectl logs -l app=document-service --tail=50
 
       - name: Smoke test API
+        if: steps.changes.outputs.app == 'true'
         run: |
           kubectl run curl-test --rm -i --restart=Never \
           --image=curlimages/curl:8.5.0 -- \
