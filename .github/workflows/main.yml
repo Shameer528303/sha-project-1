@@ -208,6 +208,10 @@ jobs:
           
       - name: Verify deployment
         run: |
+          kubectl get secret document-service-secrets -n default
+          kubectl get sa document-service-sa -n default
+          kubectl get pods -l app=document-service
+
           kubectl rollout status deployment/document-service --timeout=120s
           kubectl get pods -l app=document-service
           kubectl logs -l app=document-service --tail=50
