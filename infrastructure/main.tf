@@ -12,13 +12,11 @@ terraform {
   }
   
   # TODO: Configure S3 backend for state
-  # backend "s3" {
-  #   bucket = "your-terraform-state-bucket"
-  #   key    = "principal-sre-assessment/terraform.tfstate"
-  #   region = "us-east-1"
-  #   # Optional: Enable DynamoDB for state locking
-  #   # dynamodb_table = "terraform-state-lock"
-  # }
+  backend "s3" {
+     bucket = "terraform-state-bucket-shalih"
+     key    = "principal-sre-assessment/terraform.tfstate"
+     region = "ap-south-1"
+   }
 }
 
 provider "aws" {
@@ -44,14 +42,14 @@ provider "aws" {
 # - Route tables
 
 # TODO: Create ECR repository for container images
-# resource "aws_ecr_repository" "app" {
-#   name                 = "${var.project_name}-app"
-#   image_tag_mutability = "MUTABLE"
-# 
-#   image_scanning_configuration {
-#     scan_on_push = true
-#   }
-# }
+resource "aws_ecr_repository" "app" {
+   name                 = "${var.project_name}-app"
+   image_tag_mutability = "MUTABLE"
+ 
+   image_scanning_configuration {
+     scan_on_push = true
+   }
+}
 
 # TODO: Create EKS cluster OR ECS cluster
 # Option A: EKS
