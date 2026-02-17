@@ -1,4 +1,18 @@
 # Kubernetes Deployment for Document Service
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: document-service-secrets
+  namespace: default
+type: Opaque
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: document-service-sa
+  namespace: default
 
 apiVersion: apps/v1
 kind: Deployment
