@@ -191,6 +191,7 @@ jobs:
       - name: Configure kubectl
         run: |
           aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
+          kubectl create secret generic document-service-secrets -n default
       
       # - name: Deploy to EKS (Kubernetes Manifests)
       #   run: |
