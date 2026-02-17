@@ -49,12 +49,12 @@ jobs:
           pip install -r requirements.txt
       
       - name: Run tests
-        if: ${{ hashFiles('app/**') != '' }}
+        #if: ${{ hashFiles('app/**') != '' }}
         #if: ${{ always() && hashFiles('app/**') != '' }}
-        #if: steps.changes.outputs.app == 'true'
+        if: steps.changes.outputs.app == 'true'
         run: |
           cd app
-          python -m pytest -q --maxfail=1 --disable-warnings
+          python -m pytest -q --maxfail=2 --disable-warnings
       
       - name: Build Docker image
         if: steps.changes.outputs.app == 'true'
