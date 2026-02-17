@@ -167,33 +167,17 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
           
-  #     # TODO: Add deployment steps based on your choice (EKS or ECS)
-  #     # Option A: EKS Deployment
-  #     - name: Configure kubectl
-  #       run: |
-  #         aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
+      # TODO: Add deployment steps based on your choice (EKS or ECS)
+      # Option A: EKS Deployment
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
       
-  #     - name: Deploy to EKS (Kubernetes Manifests)
-  #       run: |
-  #         # Update image in deployment.yaml
-  #         sed -i "s|image:.*|image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|" kubernetes/deployment.yaml
-  #         kubectl apply -f kubernetes/
-      
-  #     # OR: Deploy using Helm
-  #     # - name: Deploy to EKS (Helm)
-  #     #   run: |
-  #     #     helm upgrade --install document-service kubernetes/helm/document-service \
-  #     #       --set image.repository=$ECR_REGISTRY/$ECR_REPOSITORY \
-  #     #       --set image.tag=$IMAGE_TAG
-      
-  #     # Option B: ECS Deployment
-  #     # - name: Update ECS Service
-  #     #   run: |
-  #     #     aws ecs update-service \
-  #     #       --cluster $ECS_CLUSTER_NAME \
-  #     #       --service document-service \
-  #     #       --force-new-deployment \
-  #     #       --region $AWS_REGION
+      - name: Deploy to EKS (Kubernetes Manifests)
+        run: |
+          # Update image in deployment.yaml
+          sed -i "s|image:.*|image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|" kubernetes/deployment.yaml
+          kubectl apply -f kubernetes/
       
   #     # TODO: Add integration tests
   #     # - name: Run integration tests
