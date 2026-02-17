@@ -98,17 +98,26 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.0
-      
+          
+      - name: Detect changes in infrastructure folder
+        id: changesininfra
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            infrastructure:
+              - 'infrastructure/**'
+              
       - name: Terraform Init
+        if: steps.changesininfra.outputs.infrastructure == 'true'
         run: |
           cd infrastructure
           terraform init
       
       - name: Terraform Plan
+        if: steps.changesininfra.outputs.infrastructure == 'true'
         run: |
           cd infrastructure
           terraform plan -no-color
-
   deploy:
     name: Deploy to AWS
     runs-on: ubuntu-latest
@@ -130,13 +139,23 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.0
-      
+          
+      - name: Detect changes in infrastructure folder
+        id: changesininfra
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            infrastructure:
+              - 'infrastructure/**'
+              
       - name: Terraform Init
+        if: steps.changesininfra.outputs.infrastructure == 'true'
         run: |
           cd infrastructure
           terraform init
       
       - name: Terraform Apply
+        if: steps.changesininfra.outputs.infrastructure == 'true'
         run: |
           cd infrastructure
           terraform apply -auto-approve
@@ -186,7 +205,18 @@ jobs:
         run: |
           sed -i "s|REPLACE_WITH_ECR_IMAGE|$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|g" kubernetes/deployment.yaml
           kubectl apply -f kubernetes/
+          
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/document-service --timeout=120s
+          kubectl get pods -l app=document-service
+          kubectl logs -l app=document-service --tail=50
 
+      - name: Smoke test API
+        run: |
+          kubectl run curl-test --rm -i --restart=Never \
+          --image=curlimages/curl:8.5.0 -- \
+          curl -s http://document-service/health
           
   #     # TODO: Add integration tests
   #     # - name: Run integration tests
