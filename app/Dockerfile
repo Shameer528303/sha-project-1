@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.6
 
-############################
+#############################
 # Stage 1: builder (wheels)
 ############################
 FROM python:3.11-slim AS builder
