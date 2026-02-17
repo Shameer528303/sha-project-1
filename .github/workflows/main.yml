@@ -187,7 +187,7 @@ jobs:
 
           
       # TODO: Add deployment steps based on your choice (EKS or ECS)
-      # Option A: EKS Deployment
+      # Option A: EKS Deployment.
       - name: Configure kubectl
         run: |
           aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
