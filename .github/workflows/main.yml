@@ -192,9 +192,11 @@ jobs:
       # TODO: Add deployment steps based on your choice (EKS or ECS)
       # Option A: EKS Deployment.
       - name: Configure kubectl
+        if: steps.changes.outputs.app == 'true'
         run: |
           aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
-          
+          kubectl delete pod -l app=document-service
+
       # - name: Deploy to EKS (Kubernetes Manifests)
       #   run: |
       #     # Update image in deployment.yaml
