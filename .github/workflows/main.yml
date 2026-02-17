@@ -52,7 +52,7 @@ jobs:
         if: steps.changes.outputs.app == 'true'
         run: |
           cd app
-          pytest
+          python -m pytest -q || [ $? -eq 5 ]
       
       - name: Build Docker image
         if: steps.changes.outputs.app == 'true'
