@@ -13,7 +13,7 @@ services:
       - PORT=8000
       - AWS_REGION=us-east-1
       - STORAGE_TYPE=s3
-      - STORAGE_BUCKET=document-service-storage
+      - STORAGE_BUCKET=one-storage-shahil
       - CACHE_HOST=redis
       - CACHE_PORT=6379
       - PYTHONUNBUFFERED=1
