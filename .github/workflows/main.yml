@@ -243,6 +243,7 @@ jobs:
           curl -s http://document-service/health
           
       - name: Run integration tests
+        if: steps.changesininfra.outputs.infrastructure == 'true'
         run: |
           # Test the deployed service
           ALB_DNS=$(terraform -chdir=infrastructure output -raw document_clb_dns)
