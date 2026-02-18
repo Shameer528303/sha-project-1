@@ -165,10 +165,10 @@ jobs:
       
       - name: Terraform Apply
         if: steps.changesininfra.outputs.infrastructure == 'true'
+        #terraform state show aws_cloudwatch_log_group.eks_control_plane >/dev/null 2>&1 || \
+        #terraform import aws_cloudwatch_log_group.eks_control_plane "/aws/eks/one-eks/cluster"
         run: |
           cd infrastructure
-          terraform state show aws_cloudwatch_log_group.eks_control_plane >/dev/null 2>&1 || \
-          terraform import aws_cloudwatch_log_group.eks_control_plane "/aws/eks/one-eks/cluster"
           terraform apply -auto-approve
           
       - name: Detect changes in app folder
