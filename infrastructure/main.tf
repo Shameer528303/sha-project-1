@@ -272,6 +272,14 @@ resource "aws_eks_cluster" "this" {
     endpoint_private_access = true
   }
 
+  enabled_cluster_log_types = [
+    "api",
+    "audit",
+    "authenticator",
+    "controllerManager",
+    "scheduler"
+  ]
+
   depends_on = [
     aws_iam_role_policy_attachment.eks_cluster_AmazonEKSClusterPolicy,
     aws_iam_role_policy_attachment.eks_cluster_AmazonEKSVPCResourceController
@@ -311,31 +319,6 @@ resource "aws_eks_node_group" "default" {
   tags = {
     Name = "${var.name_prefix}-nodegroup"
   }
-}
-
-#dynamodb table for state locking 
-
-resource "aws_dynamodb_table" "documents" {
-  name         = "${var.name_prefix}-documents"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "id"
-
-  attribute {
-    name = "id"
-    type = "S"
-  }
-
-  point_in_time_recovery {
-    enabled = true
-  }
-
-  tags = {
-    Name = "${var.name_prefix}-documents"
-  }
-}
-
-output "dynamodb_table_name" {
-  value = aws_dynamodb_table.documents.name
 }
 
 #S3 Bucket
@@ -413,10 +396,7 @@ output "redis_primary_endpoint" {
   value = aws_elasticache_replication_group.redis.primary_endpoint_address
 }
 
-
-
-########################################## classic loadbalancer part (FIXED)
-
+#Loadbalancer Part
 # Find EKS worker node instances by cluster tag
 data "aws_instances" "eks_nodes" {
   filter {
@@ -487,6 +467,98 @@ output "document_clb_dns" {
 }
 
 
+# CloudWatch for EKS + CLB
+# EKS Control Plane Log Group
+resource "aws_cloudwatch_log_group" "eks_control_plane" {
+  name              = "/aws/eks/${aws_eks_cluster.this.name}/cluster"
+  retention_in_days = 7
+}
+
+# CLB CloudWatch Alarms
+resource "aws_cloudwatch_metric_alarm" "clb_unhealthy_hosts" {
+  alarm_name          = "${var.name_prefix}-clb-unhealthy-hosts"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "UnHealthyHostCount"
+  namespace           = "AWS/ELB"
+  period              = 60
+  statistic           = "Average"
+  threshold           = 0
+
+  dimensions = {
+    LoadBalancerName = aws_elb.document_clb.name
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "clb_healthy_hosts_low" {
+  alarm_name          = "${var.name_prefix}-clb-healthy-hosts-low"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "HealthyHostCount"
+  namespace           = "AWS/ELB"
+  period              = 60
+  statistic           = "Average"
+  threshold           = 1
+
+  dimensions = {
+    LoadBalancerName = aws_elb.document_clb.name
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "clb_latency_high" {
+  alarm_name          = "${var.name_prefix}-clb-latency-high"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "Latency"
+  namespace           = "AWS/ELB"
+  period              = 60
+  statistic           = "Average"
+  threshold           = 1
+
+  dimensions = {
+    LoadBalancerName = aws_elb.document_clb.name
+  }
+}
+
+
+# CloudWatch Dashboard
+resource "aws_cloudwatch_dashboard" "document_service" {
+  dashboard_name = "${var.name_prefix}-document-service"
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title  = "CLB Healthy vs Unhealthy Hosts"
+          region = var.aws_region
+          metrics = [
+            ["AWS/ELB", "HealthyHostCount",   "LoadBalancerName", aws_elb.document_clb.name],
+            ["AWS/ELB", "UnHealthyHostCount", "LoadBalancerName", aws_elb.document_clb.name]
+          ]
+          period = 60
+          stat   = "Average"
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title  = "CLB Latency"
+          region = var.aws_region
+          metrics = [
+            ["AWS/ELB", "Latency", "LoadBalancerName", aws_elb.document_clb.name]
+          ]
+          period = 60
+          stat   = "Average"
+        }
+      }
+    ]
+  })
+}
 
 
 
@@ -504,16 +576,8 @@ output "document_clb_dns" {
 
 
 
-# TODO: Create Application Load Balancer
-# - ALB in public subnets
-# - Target group
-# - Listener
-# - Security groups
 
-# TODO: Create IAM roles
-# - EKS node group role / ECS task role
-# - Application service account role
-# - CI/CD role
+
 
 # TODO: Create CloudWatch resources
 # - Log groups
@@ -522,8 +586,4 @@ output "document_clb_dns" {
 # - Alarms
 
 
-# TODO: Create security groups
-# - ALB security group
-# - Application security group
-# - Minimal required ports only
 
