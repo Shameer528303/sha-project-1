@@ -242,9 +242,8 @@ jobs:
           --image=curlimages/curl:8.5.0 -- \
           curl -s http://document-service/health
           
-  #     # TODO: Add integration tests
-  #     # - name: Run integration tests
-  #     #   run: |
-  #     #     # Test the deployed service
-  #     #     ALB_DNS=$(terraform -chdir=infrastructure output -raw alb_dns_name)
-  #     #     curl -f https://$ALB_DNS/health
+      - name: Run integration tests
+        run: |
+          # Test the deployed service
+          ALB_DNS=$(terraform -chdir=infrastructure output -raw document_clb_dns)
+          curl -f https://$ALB_DNS/health
