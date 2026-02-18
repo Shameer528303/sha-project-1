@@ -1,6 +1,6 @@
 """
 Simple Document Service..
-A REST API service for storing and retrieving documents with caching.
+A REST API service for storing and retrieving documents with caching..
 """
 
 from fastapi import FastAPI, HTTPException
