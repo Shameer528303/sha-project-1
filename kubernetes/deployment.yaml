@@ -23,7 +23,7 @@ metadata:
     app: document-service
     version: v1
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: document-service
