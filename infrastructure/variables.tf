@@ -71,7 +71,7 @@ variable "eks_version" {
 variable "eks_node_instance_type" {
   type        = string
   description = "Instance type for EKS managed node group"
-  default     = "t3.micro"
+  default     = "t3.small"
 }
 
 variable "eks_node_min" {
