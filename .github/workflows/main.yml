@@ -208,6 +208,7 @@ jobs:
       #     # Update image in deployment.yaml
       #     sed -i "s|image:.*|image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|" kubernetes/deployment.yaml
       #     sed -i "s|REPLACE_WITH_ECR_IMAGE|$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|g" kubernetes/deployment.yaml
+      #     sed -i "s|^ *image:.*|image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|" kubernetes/deployment.yaml
       #     kubectl apply -f kubernetes/
           
       - name: Deploy to EKS (Kubernetes Manifests)
@@ -216,7 +217,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          sed -i "s|^ *image:.*|image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|" kubernetes/deployment.yaml
+          sed -i "s|^\([[:space:]]*\)image:.*|\1image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}|" kubernetes/deployment.yaml
           kubectl apply -f kubernetes/
           
       - name: Verify deployment
