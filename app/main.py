@@ -276,6 +276,10 @@ def _check_cache_health() -> str:
         return "error"
 
 
+@app.get("/")
+def root():
+    return {"message": "document-service is running, Hi Welcome !!!!"}
+
 @app.get("/health")
 async def health_check():
     """
