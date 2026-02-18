@@ -1,5 +1,5 @@
-# Main Terraform configuration.
-# TODO: Complete this infrastructure setup.
+# Main Terraform configuration
+# TODO: Complete this infrastructure setup
 
 terraform {
   required_version = ">= 1.5.0"
