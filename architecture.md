@@ -4,6 +4,8 @@
 
 This project deploys a **Document Service** on AWS using **Kubernetes (EKS)** and an **AWS Elastic Load Balancer (ELB)** created via Terraform.
 
+![image](https://github.com/Shameer528303/sha-project-1/blob/main/image.jpg)
+
 The API provides:
 
 * `PUT /documents/{id}` → Store document data
@@ -272,4 +274,5 @@ If both storage and cache are reachable → service is healthy.
 ✔️ System components (ELB, EKS, Redis,  S3)
 ✔️ Request flow (ELB → NodePort → Service → Pod → Redis/S3)
 ✔️ Why each service used (short)
+
 ✔️ Security overview
