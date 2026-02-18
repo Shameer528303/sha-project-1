@@ -107,7 +107,24 @@ spec:
           capabilities:
             drop:
             - ALL
----
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: document-service
+#   namespace: default
+#   labels:
+#     app: document-service
+# spec:
+#   type: ClusterIP
+#   selector:
+#     app: document-service
+#   ports:
+#   - port: 80
+#     targetPort: 8000
+#     protocol: TCP
+#     name: http
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -116,15 +133,15 @@ metadata:
   labels:
     app: document-service
 spec:
-  type: ClusterIP
+  type: NodePort
   selector:
     app: document-service
   ports:
-  - port: 80
-    targetPort: 8000
-    protocol: TCP
-    name: http
-
+    - name: http
+      port: 80
+      targetPort: 8000
+      nodePort: 30080
+      protocol: TCP
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -133,4 +150,4 @@ metadata:
   namespace: default
 data:
   storage-bucket: "document-service-storage-one"
-  cache-host: "elasticache-redis-endpoint"
+  cache-host: ""
