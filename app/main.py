@@ -1,5 +1,5 @@
 """
-Simple Document Service.
+Simple Document Service
 A REST API service for storing and retrieving documents with caching..
 """
 
