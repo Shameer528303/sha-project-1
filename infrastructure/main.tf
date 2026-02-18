@@ -560,30 +560,3 @@ resource "aws_cloudwatch_dashboard" "document_service" {
   })
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# TODO: Create CloudWatch resources
-# - Log groups
-# - Custom metrics (optional)
-# - Dashboards
-# - Alarms
-
-
-
