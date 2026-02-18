@@ -7,6 +7,8 @@ The architecture follows production-grade best practices including infrastructur
 
 ##  Architecture Overview
 
+![image](https://github.com/Shameer528303/sha-project-1/blob/main/image.jpg)
+
 ### Core Components:
 
 | Layer                   | Service                         | Purpose                                 |
@@ -194,6 +196,7 @@ This project demonstrates a real-world cloud-native microservice deployed using:
 ✔ Performance optimization using cache
 
 It closely follows modern DevOps and SRE production patterns.
+
 
 
 
