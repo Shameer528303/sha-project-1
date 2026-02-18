@@ -248,4 +248,4 @@ jobs:
           cd infrastructure
           terraform init
           CLB_DNS=$(terraform output -raw document_clb_dns)
-          curl -f http://$CLB_DNS/health
+          curl -f http://$CLB_DNS/health | grep -q '"status":"healthy"'
