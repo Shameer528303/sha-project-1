@@ -397,11 +397,94 @@ output "redis_primary_endpoint" {
 
 
 
-# TODO: Create EKS cluster OR ECS cluster
-# Option A: EKS
-# - EKS cluster
-# - Node group(s) in private subnets
-# - IAM roles for service accounts
+########################################## classic loadbalancer part (FIXED)
+
+# Find EKS worker node instances by cluster tag
+data "aws_instances" "eks_nodes" {
+  filter {
+    name   = "tag:kubernetes.io/cluster/${aws_eks_cluster.this.name}"
+    values = ["owned", "shared"]
+  }
+}
+
+# Security Group for the CLB (public)
+resource "aws_security_group" "document_clb_sg" {
+  name   = "${var.name_prefix}-doc-clb-sg"
+  vpc_id = aws_vpc.main.id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Allow CLB -> Nodes on NodePort (30080)
+# NOTE: Using EKS cluster security group because EKS attaches it to nodes as well.
+resource "aws_security_group_rule" "nodes_allow_from_clb_nodeport" {
+  type                     = "ingress"
+  security_group_id        = aws_eks_cluster.this.vpc_config[0].cluster_security_group_id
+  from_port                = 30080
+  to_port                  = 30080
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.document_clb_sg.id
+}
+
+# Classic Load Balancer in PUBLIC subnets
+resource "aws_elb" "document_clb" {
+  name            = substr("${var.name_prefix}-doc-clb", 0, 32)
+  subnets         = aws_subnet.public[*].id
+  security_groups = [aws_security_group.document_clb_sg.id]
+
+  listener {
+    lb_port           = 80
+    lb_protocol       = "http"
+    instance_port     = 30080
+    instance_protocol = "http"
+  } # <-- IMPORTANT: this closing brace was missing in your code
+
+  health_check {
+    target              = "HTTP:30080/health"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+  }
+
+  instances = data.aws_instances.eks_nodes.ids
+
+  depends_on = [aws_eks_node_group.default]
+}
+
+output "document_clb_dns" {
+  value = aws_elb.document_clb.dns_name
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # TODO: Create Application Load Balancer
 # - ALB in public subnets
@@ -420,8 +503,6 @@ output "redis_primary_endpoint" {
 # - Dashboards
 # - Alarms
 
-# TODO: Create Secrets Manager
-# - Secret for API keys (if using OpenAI)
 
 # TODO: Create security groups
 # - ALB security group
