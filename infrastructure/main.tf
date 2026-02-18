@@ -338,6 +338,24 @@ output "dynamodb_table_name" {
   value = aws_dynamodb_table.documents.name
 }
 
+#S3 Bucket
+resource "aws_s3_bucket" "document_storage" {
+  bucket = "${var.name_prefix}-storage-shahil"
+
+  tags = {
+    Name        = "${var.name_prefix}-storage-shahil"
+  }
+}
+
+# Enable versioning (safe for deletes/overwrites)
+resource "aws_s3_bucket_versioning" "document_storage" {
+  bucket = aws_s3_bucket.document_storage.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 
 #ElastiCache Redis
 # Security group allowing Redis only from EKS nodes (inside VPC)
