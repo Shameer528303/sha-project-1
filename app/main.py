@@ -25,8 +25,8 @@ app = FastAPI(title="Document Service", version="1.0.0")
 
 # Configuration
 MAX_CONTENT_SIZE = 100 * 1024  # 100 KB
-#STORAGE_BUCKET = os.getenv('STORAGE_BUCKET', 'document-service-storage-one')
-STORAGE_TYPE = os.getenv('STORAGE_TYPE', 'dynamodb')  # 's3', 'dynamodb', 'rds'
+STORAGE_BUCKET = os.getenv('STORAGE_BUCKET', 'one-storage-shahil')
+STORAGE_TYPE = os.getenv('STORAGE_TYPE', 's3')  # 's3', 'dynamodb', 'rds'
 AWS_REGION = os.getenv('AWS_REGION', 'ap-south-1')
 
 DYNAMODB_TABLE = os.getenv('DYNAMODB_TABLE', 'one-documents')
