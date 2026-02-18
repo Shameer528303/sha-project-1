@@ -149,5 +149,5 @@ metadata:
   name: document-service-config
   namespace: default
 data:
-  storage-bucket: "document-service-storage-one"
+  storage-bucket: "one-storage-shahil"
   cache-host: "one-redis.esfyj5.ng.0001.aps1.cache.amazonaws.com"
