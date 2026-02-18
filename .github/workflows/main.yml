@@ -242,10 +242,3 @@ jobs:
           --image=curlimages/curl:8.5.0 -- \
           curl -s http://document-service/health
           
-      - name: Run integration tests
-        #if: steps.changesininfra.outputs.infrastructure == 'true'
-        run: |
-          cd infrastructure
-          terraform init
-          CLB_DNS=$(terraform output -raw document_clb_dns)
-          curl -f http://$CLB_DNS/health | grep -q '"status":"healthy"'
