@@ -11,7 +11,7 @@ terraform {
     }
   }
   
-  # TODO: Configure S3 backend for state
+  # S3 backend for state
   backend "s3" {
      bucket = "terraform-state-bucket-shalih"
      key    = "principal-sre-assessment/terraform.tfstate"
